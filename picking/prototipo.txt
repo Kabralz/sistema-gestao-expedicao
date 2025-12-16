@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="pt-BR" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro de Ocorrências</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    .table-scrollable {
+      overflow-x: auto;
+      overflow-y: auto;
+    }
+    
+    .table-cell-editable {
+      cursor: text;
+      transition: background-color 0.2s;
+    }
+    
+    .table-cell-editable:hover {
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+    
+    .table-cell-editing {
+      background-color: rgba(59, 130, 246, 0.2);
+      outline: 2px solid #3b82f6;
+      outline-offset: -2px;
+    }
+    
+    input.cell-input {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 0.5rem;
+      color: inherit;
+      font-size: inherit;
+    }
+    
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full w-full">
+  <div id="app-wrapper" class="h-full w-full overflow-auto">
+   <div class="min-h-full w-full p-6"><!-- Header -->
+    <div class="mb-6">
+     <h1 id="page-title" class="text-3xl font-bold mb-6">Registro de Ocorrências</h1><!-- Action Bar -->
+     <div class="flex flex-wrap gap-4 items-center mb-4"><button id="btn-insert" class="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2"> <span>➕</span> <span id="btn-insert-text">Inserir Nova Linha</span> </button> <button id="btn-settings" class="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2"> <span>⚙️</span> <span id="btn-settings-text">Ajustar Listas de Gabarito</span> </button>
+      <div class="ml-auto flex items-center gap-2 px-4 py-2 rounded-lg"><span class="text-xl">🔍</span> <input id="search-input" type="text" placeholder="Buscar ocorrências..." class="bg-transparent border-none outline-none text-sm w-64">
+      </div>
+     </div>
+    </div><!-- Table Container -->
+    <div class="table-scrollable rounded-lg shadow-2xl" style="max-height: calc(100vh - 250px);">
+     <table class="w-full border-collapse">
+      <thead class="sticky-header">
+       <tr id="table-header">
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Data</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Hora</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Tipo</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Prioridade</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Responsável</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Status</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Local</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Descrição</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Observações</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Protocolo</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Categoria</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Subcategoria</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Departamento</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Solicitante</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider border-r whitespace-nowrap">Prazo</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Ações</th>
+       </tr>
+      </thead>
+      <tbody id="table-body"><!-- Rows will be inserted here -->
+      </tbody>
+     </table>
+    </div><!-- Empty State -->
+    <div id="empty-state" class="text-center py-12">
+     <p class="text-lg opacity-60">Nenhuma ocorrência registrada. Clique em "➕ Inserir Nova Linha" para adicionar.</p>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      background_color: "#0f172a",
+      surface_color: "#ffffff",
+      text_color: "#1e293b",
+      primary_action_color: "#10b981",
+      secondary_action_color: "#f59e0b",
+      page_title: "Registro de Ocorrências",
+      new_record_button: "Inserir Nova Linha",
+      settings_button: "Ajustar Listas de Gabarito",
+      search_placeholder: "Buscar ocorrências...",
+      font_family: "Inter",
+      font_size: 14
+    };
+    
+    let allRecords = [];
+    let editingCell = null;
+    
+    const dataHandler = {
+      onDataChanged(data) {
+        allRecords = data;
+        renderTable(data);
+        updateEmptyState(data.length === 0);
+      }
+    };
+    
+    function updateEmptyState(isEmpty) {
+      const emptyState = document.getElementById('empty-state');
+      const tableContainer = document.querySelector('.table-scrollable');
+      
+      if (isEmpty) {
+        emptyState.style.display = 'block';
+        tableContainer.style.display = 'none';
+      } else {
+        emptyState.style.display = 'none';
+        tableContainer.style.display = 'block';
+      }
+    }
+    
+    function renderTable(records) {
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = '';
+      
+      records.forEach(record => {
+        const row = createTableRow(record);
+        tbody.appendChild(row);
+      });
+    }
+    
+    function createTableRow(record) {
+      const row = document.createElement('tr');
+      row.className = 'border-b hover:bg-opacity-50 transition-colors';
+      row.dataset.recordId = record.__backendId;
+      
+      const fields = ['data', 'hora', 'tipo', 'prioridade', 'responsavel', 'status', 'local', 'descricao', 'observacoes', 'protocolo', 'categoria', 'subcategoria', 'departamento', 'solicitante', 'prazo'];
+      
+      fields.forEach(field => {
+        const cell = document.createElement('td');
+        cell.className = 'px-4 py-3 text-sm border-r table-cell-editable whitespace-nowrap';
+        cell.textContent = record[field] || '';
+        cell.dataset.field = field;
+        cell.addEventListener('click', () => startEditing(cell, record));
+        row.appendChild(cell);
+      });
+      
+      const actionsCell = document.createElement('td');
+      actionsCell.className = 'px-4 py-3 text-sm';
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = '🗑️';
+      deleteBtn.className = 'hover:scale-125 transition-transform';
+      deleteBtn.addEventListener('click', () => deleteRecord(record));
+      actionsCell.appendChild(deleteBtn);
+      row.appendChild(actionsCell);
+      
+      return row;
+    }
+    
+    function startEditing(cell, record) {
+      if (editingCell) {
+        finishEditing();
+      }
+      
+      editingCell = { cell, record, originalValue: cell.textContent };
+      cell.classList.add('table-cell-editing');
+      
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'cell-input';
+      input.value = cell.textContent;
+      
+      cell.textContent = '';
+      cell.appendChild(input);
+      input.focus();
+      input.select();
+      
+      input.addEventListener('blur', finishEditing);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          finishEditing();
+        } else if (e.key === 'Escape') {
+          cancelEditing();
+        }
+      });
+    }
+    
+    async function finishEditing() {
+      if (!editingCell) return;
+      
+      const { cell, record } = editingCell;
+      const input = cell.querySelector('input');
+      const newValue = input ? input.value : cell.textContent;
+      const field = cell.dataset.field;
+      
+      cell.classList.remove('table-cell-editing');
+      cell.textContent = newValue;
+      
+      if (newValue !== editingCell.originalValue) {
+        const updatedRecord = { ...record, [field]: newValue };
+        const result = await window.dataSdk.update(updatedRecord);
+        
+        if (!result.isOk) {
+          cell.textContent = editingCell.originalValue;
+          showToast('Erro ao atualizar: ' + result.error.message, 'error');
+        }
+      }
+      
+      editingCell = null;
+    }
+    
+    function cancelEditing() {
+      if (!editingCell) return;
+      
+      const { cell } = editingCell;
+      cell.classList.remove('table-cell-editing');
+      cell.textContent = editingCell.originalValue;
+      editingCell = null;
+    }
+    
+    async function deleteRecord(record) {
+      const deleteBtn = event.target;
+      const originalText = deleteBtn.textContent;
+      
+      if (deleteBtn.textContent !== '✅ Confirmar?') {
+        deleteBtn.textContent = '✅ Confirmar?';
+        setTimeout(() => {
+          if (deleteBtn.textContent === '✅ Confirmar?') {
+            deleteBtn.textContent = originalText;
+          }
+        }, 3000);
+        return;
+      }
+      
+      deleteBtn.disabled = true;
+      const result = await window.dataSdk.delete(record);
+      
+      if (!result.isOk) {
+        showToast('Erro ao excluir: ' + result.error.message, 'error');
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = originalText;
+      }
+    }
+    
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 transition-opacity';
+      toast.style.backgroundColor = type === 'error' ? '#ef4444' : '#10b981';
+      toast.textContent = message;
+      
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+    
+    async function insertNewRow() {
+      if (allRecords.length >= 999) {
+        showToast('Limite máximo de 999 registros atingido. Exclua alguns registros primeiro.', 'error');
+        return;
+      }
+      
+      const btnInsert = document.getElementById('btn-insert');
+      btnInsert.disabled = true;
+      btnInsert.style.opacity = '0.5';
+      
+      const newRecord = {
+        id: Date.now().toString(),
+        data: new Date().toLocaleDateString('pt-BR'),
+        hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        tipo: '',
+        prioridade: '',
+        responsavel: '',
+        status: 'Novo',
+        local: '',
+        descricao: '',
+        observacoes: '',
+        protocolo: 'PROT-' + Date.now(),
+        categoria: '',
+        subcategoria: '',
+        departamento: '',
+        solicitante: '',
+        prazo: ''
+      };
+      
+      const result = await window.dataSdk.create(newRecord);
+      
+      btnInsert.disabled = false;
+      btnInsert.style.opacity = '1';
+      
+      if (!result.isOk) {
+        showToast('Erro ao criar registro: ' + result.error.message, 'error');
+      } else {
+        showToast('Nova linha inserida com sucesso!', 'info');
+      }
+    }
+    
+    function setupSearch() {
+      const searchInput = document.getElementById('search-input');
+      searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        
+        if (!searchTerm) {
+          renderTable(allRecords);
+          return;
+        }
+        
+        const filtered = allRecords.filter(record => {
+          return Object.values(record).some(value => 
+            String(value).toLowerCase().includes(searchTerm)
+          );
+        });
+        
+        renderTable(filtered);
+      });
+    }
+    
+    async function onConfigChange(config) {
+      const backgroundColor = config.background_color || defaultConfig.background_color;
+      const surfaceColor = config.surface_color || defaultConfig.surface_color;
+      const textColor = config.text_color || defaultConfig.text_color;
+      const primaryActionColor = config.primary_action_color || defaultConfig.primary_action_color;
+      const secondaryActionColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+      const customFont = config.font_family || defaultConfig.font_family;
+      const baseSize = config.font_size || defaultConfig.font_size;
+      
+      const baseFontStack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      
+      document.body.style.backgroundColor = backgroundColor;
+      document.body.style.color = textColor;
+      document.body.style.fontFamily = `${customFont}, ${baseFontStack}`;
+      
+      document.getElementById('app-wrapper').style.backgroundColor = backgroundColor;
+      
+      document.getElementById('page-title').textContent = config.page_title || defaultConfig.page_title;
+      document.getElementById('page-title').style.fontSize = `${baseSize * 2}px`;
+      document.getElementById('page-title').style.fontFamily = `${customFont}, ${baseFontStack}`;
+      
+      document.getElementById('btn-insert-text').textContent = config.new_record_button || defaultConfig.new_record_button;
+      document.getElementById('btn-settings-text').textContent = config.settings_button || defaultConfig.settings_button;
+      document.getElementById('search-input').placeholder = config.search_placeholder || defaultConfig.search_placeholder;
+      
+      const btnInsert = document.getElementById('btn-insert');
+      btnInsert.style.backgroundColor = primaryActionColor;
+      btnInsert.style.color = '#ffffff';
+      btnInsert.style.fontSize = `${baseSize}px`;
+      
+      const btnSettings = document.getElementById('btn-settings');
+      btnSettings.style.backgroundColor = secondaryActionColor;
+      btnSettings.style.color = '#000000';
+      btnSettings.style.fontSize = `${baseSize}px`;
+      
+      const searchContainer = document.getElementById('search-input').parentElement;
+      searchContainer.style.backgroundColor = surfaceColor;
+      searchContainer.style.color = textColor;
+      
+      const searchInput = document.getElementById('search-input');
+      searchInput.style.color = textColor;
+      searchInput.style.fontSize = `${baseSize * 0.9}px`;
+      
+      const tableContainer = document.querySelector('.table-scrollable');
+      tableContainer.style.backgroundColor = surfaceColor;
+      
+      const tableHeader = document.getElementById('table-header');
+      tableHeader.style.backgroundColor = surfaceColor;
+      tableHeader.style.color = textColor;
+      
+      const headerCells = tableHeader.querySelectorAll('th');
+      headerCells.forEach(th => {
+        th.style.borderColor = backgroundColor;
+        th.style.fontSize = `${baseSize * 0.85}px`;
+        th.style.fontFamily = `${customFont}, ${baseFontStack}`;
+      });
+      
+      const tbody = document.getElementById('table-body');
+      const rows = tbody.querySelectorAll('tr');
+      rows.forEach(row => {
+        row.style.borderColor = backgroundColor;
+        const cells = row.querySelectorAll('td');
+        cells.forEach(cell => {
+          cell.style.borderColor = backgroundColor;
+          cell.style.fontSize = `${baseSize * 0.9}px`;
+          cell.style.fontFamily = `${customFont}, ${baseFontStack}`;
+        });
+      });
+      
+      const emptyState = document.getElementById('empty-state');
+      emptyState.style.color = textColor;
+      emptyState.style.fontSize = `${baseSize * 1.1}px`;
+      emptyState.style.fontFamily = `${customFont}, ${baseFontStack}`;
+    }
+    
+    async function init() {
+      if (window.elementSdk) {
+        await window.elementSdk.init({
+          defaultConfig,
+          onConfigChange,
+          mapToCapabilities: (config) => ({
+            recolorables: [
+              {
+                get: () => config.background_color || defaultConfig.background_color,
+                set: (value) => {
+                  config.background_color = value;
+                  window.elementSdk.setConfig({ background_color: value });
+                }
+              },
+              {
+                get: () => config.surface_color || defaultConfig.surface_color,
+                set: (value) => {
+                  config.surface_color = value;
+                  window.elementSdk.setConfig({ surface_color: value });
+                }
+              },
+              {
+                get: () => config.text_color || defaultConfig.text_color,
+                set: (value) => {
+                  config.text_color = value;
+                  window.elementSdk.setConfig({ text_color: value });
+                }
+              },
+              {
+                get: () => config.primary_action_color || defaultConfig.primary_action_color,
+                set: (value) => {
+                  config.primary_action_color = value;
+                  window.elementSdk.setConfig({ primary_action_color: value });
+                }
+              },
+              {
+                get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+                set: (value) => {
+                  config.secondary_action_color = value;
+                  window.elementSdk.setConfig({ secondary_action_color: value });
+                }
+              }
+            ],
+            borderables: [],
+            fontEditable: {
+              get: () => config.font_family || defaultConfig.font_family,
+              set: (value) => {
+                config.font_family = value;
+                window.elementSdk.setConfig({ font_family: value });
+              }
+            },
+            fontSizeable: {
+              get: () => config.font_size || defaultConfig.font_size,
+              set: (value) => {
+                config.font_size = value;
+                window.elementSdk.setConfig({ font_size: value });
+              }
+            }
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ["page_title", config.page_title || defaultConfig.page_title],
+            ["new_record_button", config.new_record_button || defaultConfig.new_record_button],
+            ["settings_button", config.settings_button || defaultConfig.settings_button],
+            ["search_placeholder", config.search_placeholder || defaultConfig.search_placeholder]
+          ])
+        });
+        
+        await onConfigChange(window.elementSdk.config);
+      }
+      
+      if (window.dataSdk) {
+        const initResult = await window.dataSdk.init(dataHandler);
+        if (!initResult.isOk) {
+          console.error("Falha ao inicializar Data SDK");
+        }
+      }
+      
+      document.getElementById('btn-insert').addEventListener('click', insertNewRow);
+      document.getElementById('btn-settings').addEventListener('click', () => {
+        showToast('Função de configuração de listas será implementada em breve!', 'info');
+      });
+      
+      setupSearch();
+    }
+    
+    init();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ac7064a369ac6c1',t:'MTc2NTQ3NzUyNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

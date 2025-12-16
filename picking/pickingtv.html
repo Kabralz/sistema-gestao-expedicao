@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Picking TV</title>
+    
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+    <style>
+        /* ... SEU CSS ORIGINAL ... */
+        :root {
+            --header-height: 6vh; 
+            --meta-bar-height: 6vh; 
+            --footer-height: 10vh; 
+            --spacing: 1.5vh;
+            --chart-area-height: calc(100vh - var(--header-height) - var(--meta-bar-height) - var(--footer-height) - (5 * var(--spacing)));
+            /* 🛑 NOVO: Altura máxima da área de scroll/gráfico para estabilizar 🛑 */
+            --max-chart-scroll-height: calc(var(--chart-area-height) - 70px); 
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0c0c1e; 
+            color: #ffffff;
+            margin: 0;
+            padding: 1vh; 
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; 
+            overflow: hidden; 
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: var(--header-height); 
+            background-color: #1a1a3a;
+            border-radius: 8px;
+            padding: 0 15px; 
+            margin-bottom: var(--spacing);
+        }
+
+        .header h1 {
+            font-size: 3.0em; 
+            color: #ffffff; 
+            margin: 0; 
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-grow: 0; 
+            flex-shrink: 0;
+        }
+        
+        .header .logo {
+            height: 4.5vh; 
+            width: auto;
+        }
+
+        .header .meta-info {
+            font-size: 1.1em; 
+            text-align: right;
+            color: #c0c0c0;
+            flex-shrink: 0;
+        }
+
+        /* 🛑 STATUS ERP NO CENTRO DO HEADER (COMPACTADO E EXPANDIDO) 🛑 */
+        .erp-status-in-header {
+            background-color: #0d1226;
+            border: 1px solid #2196f3;
+            padding: 5px 15px;
+            border-radius: 6px;
+            display: flex;
+            gap: 15px; 
+            align-items: center;
+            font-size: 1.2em; 
+            flex-grow: 1; 
+            justify-content: center; 
+            margin: 0 50px; 
+        }
+        .erp-status-in-header .label {
+            color: #c0c0c0;
+            text-transform: uppercase; 
+        }
+        .erp-status-in-header .valor {
+            font-size: 1.5em; 
+            font-weight: bold;
+        }
+        .erp-status-in-header .aberto-cor { color: #ffeb3b; }
+        .erp-status-in-header .digitado-cor { color: #f44336; }
+        .erp-status-in-header .processando-cor { color: #00bcd4; }
+        /* 🛑 NOVAS CORES PARA O FATURADO SEGREGADO 🛑 */
+        .faturado-venda-cor { color: #4CAF50; } /* Verde Venda */
+        .faturado-boni-cor { color: #FF9800; } /* Laranja Bonificação */
+        /* FIM STATUS ERP */
+
+        /* 🛑 ESTILO DA BARRA DE METAS (AGORA MAIS HARMONIOSA) 🛑 */
+        .metas-input-bar {
+            /* USA O FLEXBOX SIMPLES PARA HARMONIA E CENTRALIZAÇÃO */
+            display: flex;
+            justify-content: center; /* CENTRALIZA TODOS OS INPUTS JUNTOS */
+            align-items: center;
+            height: var(--meta-bar-height); /* Usa a nova altura */
+            background-color: #1a1a3a;
+            padding: 0 15px;
+            border-radius: 8px;
+            margin-bottom: var(--spacing);
+            font-size: 1.3em; /* AJUSTADO AO NOVO METAS BAR */
+            gap: 40px; /* AUMENTA O ESPAÇAMENTO ENTRE GRUPOS */
+        }
+
+        /* CONTAINER DE GRUPO DE INPUTS (AJUSTADO PARA A ORDEM ORIGINAL) */
+        .metas-group-container {
+            display: flex;
+            gap: 20px; 
+            align-items: center;
+        }
+        
+        /* INPUTS DE META */
+        .metas-input-bar label { 
+            font-weight: bold; 
+            color: #FFFFFF !important; 
+            text-transform: uppercase; /* MAIÚSCULAS */
+        }
+        .metas-input-bar input[type="number"] {
+            width: 80px; 
+            padding: 5px 6px; /* REDUZIDO PADDING PARA CABER */
+            border-radius: 6px; 
+            background-color: #2a2a4a;
+            color: #FFFFFF; 
+            font-size: 1.2em; /* AJUSTADO AO NOVO METAS BAR */
+            text-align: center;
+            opacity: 1; 
+            cursor: default;
+        }
+
+        .metas-input-bar .sep-group label { color: #ff5722; font-weight: bold; } 
+        .metas-input-bar .conf-group label { color: #2196f3; font-weight: bold; } 
+
+        .metas-input-bar input[type="number"].pedidos-cor { border: 1px solid #FF1493; color: #FF1493 ; }
+        .metas-input-bar input[type="number"].volumes-cor { border: 1px solid #00F0FF; color: #00F0FF ; }
+        .metas-input-bar input[type="number"].sku-cor { border: 1px solid #FFC0CB; color: #FFC0CB ; }
+
+        /* Estilo específico para o campo de data e select de turno */
+        .metas-input-bar input[type="date"],
+        .metas-input-bar select {
+            width: 130px; 
+            padding: 5px 6px; /* REDUZIDO PADDING PARA CABER */
+            border-radius: 6px; 
+            background-color: #2a2a4a;
+            color: #4CAF50; 
+            font-size: 1.2em; /* AJUSTADO AO NOVO METAS BAR */
+            text-align: center;
+            border: 1px solid #4CAF50;
+            cursor: pointer;
+        }
+        .metas-input-bar select#periodo-selecionado {
+            color: #FF5722; 
+            border: 1px solid #FF5722;
+        }
+
+        /* 🛑 GRADE PRINCIPAL (GRÁFICOS) 🛑 */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing); 
+            height: var(--chart-area-height);
+            margin-bottom: var(--spacing);
+        }
+        .painel {
+            background-color: #1a1a3a; 
+            padding: 10px; 
+            border-radius: 8px;
+            overflow: hidden; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column;
+        }
+        .painel h2 {
+            font-size: 2.0em; 
+            margin-top: 0;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #3a3a5a;
+            padding-bottom: 8px;
+            flex-shrink: 0; 
+            text-transform: uppercase; 
+        }
+        .painel.sep h2 { color: #ff5722; }
+        .painel.conf h2 { color: #2196f3; }
+        
+        /* 🛑 NOVO WRAPPER PARA ROLAGEM 🛑 */
+        .chart-scroll-wrapper {
+            flex-grow: 1; 
+            overflow-y: auto; 
+            padding-bottom: 10px; 
+            /* Estilos de scrollbar */
+            scrollbar-width: thin;
+            scrollbar-color: #808080 #1a1a3a;
+            /* NOVO: Limita a altura do scroll para o chart caber no painel */
+            max-height: var(--max-chart-scroll-height); 
+        }
+        .chart-scroll-wrapper::-webkit-scrollbar {
+            width: 8px;
+        }
+        .chart-scroll-wrapper::-webkit-scrollbar-track {
+            background: #1a1a3a;
+        }
+        .chart-scroll-wrapper::-webkit-scrollbar-thumb {
+            background-color: #808080;
+            border-radius: 4px;
+        }
+        /* FIM DO NOVO WRAPPER */
+
+        .chart-container {
+            /* Fundo base */
+            background-color: #2a2a4a;
+            border-radius: 6px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; 
+            /* AJUSTE: Remove min-height fixo e deixa o resize dominar */
+            min-height: 100px; 
+            position: relative;
+        }
+        .chart-container h3 {
+            font-size: 1.1em; 
+            color: #c0c0c0;
+            margin-bottom: 5px;
+            text-transform: uppercase; 
+        }
+        
+        /* 🛑 ESTILO DA MARCA D'ÁGUA DE COR (CORREÇÃO DE APLICAÇÃO) 🛑 */
+        /* SEPARAÇÃO: Base color #ff5722 (R: 255, G: 87, B: 34) */
+        .painel.sep .chart-container {
+            /* Aplica a cor com baixa opacidade para dar o efeito de tint */
+            background-color: rgba(211, 60, 14, 0.1); 
+        }
+
+        /* CONFERÊNCIA: Base color #2196f3 (R: 33, G: 150, B: 243) */
+        .painel.conf .chart-container {
+            /* Aplica a cor com baixa opacidade para dar o efeito de tint */
+            background-color: rgba(33, 150, 243, 0.1);
+        }
+        /* FIM DO ESTILO DA MARCA D'ÁGUA */
+
+
+        /* 🛑 LAYOUT DO RODAPÉ (KPIs) 🛑 */
+        .resumo-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 15px;
+            height: var(--footer-height); 
+        }
+        
+        .resumo-card {
+            background-color: #2a2a4a;
+            padding: 5px 5px; 
+            border-radius: 6px;
+            font-size: 1.2em; 
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .resumo-card .valor {
+            font-size: 3.5em; 
+            font-weight: bold;
+            display: block;
+            margin-bottom: 3px;
+        }
+        .resumo-card .label {
+            font-size: 1.2em; 
+            color: #FFFFFF;
+            text-transform: uppercase; 
+            line-height: 1.1; 
+        }
+        
+        /* 🛑 CLASSES DE COR POR MÉTRICA (SINCRONIA TOTAL) 🛑 */
+        .pedidos-cor { color: #FF1493 ; }
+        .volumes-cor { color: #00F0FF ; }
+        .sku-cor { color: #FFC0CB ; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <img src="Logo.svg" alt="Souza Logo" class="logo"> 
+            COMERCIAL SOUZA
+        </h1>
+        
+        <div class="erp-status-in-header">
+            <span class="label" style="color:#2196f3; font-weight: bold; font-size: 1.2em;">STATUS ERP:</span>
+            
+            <span class="label">Total Aberto:</span>
+            <span class="valor aberto-cor" id="erp-total-aberto">0</span>
+            
+            <span class="label">Digitado:</span>
+            <span class="valor digitado-cor" id="erp-digitado">0</span>
+            
+            <span class="label">Processando:</span>
+            <span class="valor processando-cor" id="erp-processado">0</span>
+            
+            <span class="label" style="color:#c0c0c0; border-left: 1px solid #3a3a5a; padding-left: 15px;">Faturado Venda:</span>
+            <span class="valor faturado-venda-cor" id="erp-faturado-venda">0</span>
+            
+            <span class="label">Bonificação:</span>
+            <span class="valor faturado-boni-cor" id="erp-faturado-bonificacao">0</span>
+            </div>
+
+        <div class="meta-info">
+            <p>DATA: <span id="data-atual"></span> | ÚLTIMA ATUALIZAÇÃO: <span id="hora-atual"></span></p>
+            <p>CONEXÃO: <span id="status-conexao" style="color: red;">DESCONECTADO</span></p>
+        </div>
+    </div>
+
+    <div class="metas-input-bar">
+        <div class="date-group">
+            <label for="data-selecionada" style="color: #4CAF50 !important; font-weight: bold;">DATA:</label>
+            <input type="date" id="data-selecionada" onchange="requestDataForSelectedDate(this.value, document.getElementById('periodo-selecionado').value)" style="width: 130px; border: 1px solid #4CAF50;">
+        </div>
+        
+        <div class="date-group" style="margin-right: 50px;">
+            <label for="periodo-selecionado" style="color: #FF5722 !important; font-weight: bold;">TURNO:</label>
+            <select id="periodo-selecionado" onchange="requestDataForSelectedDate(document.getElementById('data-selecionada').value, this.value)">
+                <option value="">TODOS</option>
+                <option value="T1">T1</option>
+                <option value="T2">T2</option>
+                <option value="T3">T3</option>
+            </select>
+        </div>
+        
+        <div class="metas-group-container">
+            <div class="sep-group">
+                <label for="meta-pedidos-sep" class="pedidos-cor">PEDIDOS SEP:</label>
+                <input type="number" id="meta-pedidos-sep" value="35" readonly class="pedidos-cor border-pedidos">
+            </div>
+            <div class="sep-group">
+                <label for="meta-volumes-sep" class="volumes-cor">VOLUMES SEP:</label>
+                <input type="number" id="meta-volumes-sep" value="1000" readonly class="volumes-cor border-volumes">
+            </div>
+            <div class="sep-group">
+                <label for="meta-sku-sep" class="sku-cor">SKUS SEP:</label>
+                <input type="number" id="meta-sku-sep" value="350" readonly class="sku-cor border-sku">
+            </div>
+        </div>
+        
+        <div class="metas-group-container">
+            <div class="conf-group">
+                <label for="meta-pedidos-conf" class="pedidos-cor">PEDIDOS CONF:</label>
+                <input type="number" id="meta-pedidos-conf" value="50" readonly class="pedidos-cor border-pedidos">
+            </div>
+            <div class="conf-group">
+                <label for="meta-volumes-conf" class="volumes-cor">VOLUMES CONF:</label>
+                <input type="number" id="meta-volumes-conf" value="1400" readonly class="volumes-cor border-volumes">
+            </div>
+            <div class="conf-group">
+                <label for="meta-sku-conf" class="sku-cor">SKUS CONF:</label>
+                <input type="number" id="meta-sku-conf" value="550" readonly class="sku-cor border-sku">
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-grid">
+        <div class="painel sep">
+            <h2>SEPARAÇÃO <span id="cont-sep-ativos" style="font-size: 0.7em; color: #ffffff;">(FUNCIONÁRIOS: 0)</span></h2>
+            <div class="chart-scroll-wrapper">
+                <div class="chart-container" id="chartConsolidadoSepContainer">
+                    <h3 style="margin-bottom: 5px;">PROGRESSO CONSOLIDADO (PEDIDOS, VOLUMES, SKUS)</h3>
+                    <canvas id="chartConsolidadoSep"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="painel conf">
+            <h2>CONFERÊNCIA <span id="cont-conf-ativos" style="font-size: 0.7em; color: #ffffff;">(FUNCIONÁRIOS: 0)</span></h2>
+            <div class="chart-scroll-wrapper">
+                <div class="chart-container" id="chartConsolidadoConfContainer">
+                    <h3 style="margin-bottom: 5px;">PROGRESSO CONSOLIDADO (PEDIDOS, VOLUMES, SKUS)</h3>
+                    <canvas id="chartConsolidadoConf"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="resumo-grid">
+        <div class="resumo-card">
+            <span class="valor pedidos-cor" id="total-sep-pedidos">2</span> <span class="label">Total Pedidos Sep.</span>
+        </div>
+        <div class="resumo-card">
+            <span class="valor sku-cor" id="total-sep-sku">25</span> <span class="label">Total de SKUs Sep.</span>
+        </div>
+        <div class="resumo-card">
+            <span class="valor volumes-cor" id="total-sep-volumes">40</span> <span class="label">Total de Volumes Sep.</span>
+        </div>
+
+        <div class="resumo-card">
+            <span class="valor pedidos-cor" id="total-conf-pedidos">2</span> <span class="label">Total Pedidos Conf.</span>
+        </div>
+        <div class="resumo-card">
+            <span class="valor sku-cor" id="total-conf-sku">61</span> <span class="label">Total de SKUs Conf.</span>
+        </div>
+        <div class="resumo-card">
+            <span class="valor volumes-cor" id="total-conf-volumes">322</span> <span class="label">Total de Volumes Conf.</span>
+        </div>
+    </div>
+
+    <script>
+        // ===================================================
+        // REGISTRO GLOBAL DE PLUGINS (CRÍTICO)
+        // ===================================================
+        if (typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+        }
+
+        // ===================================================
+        // CONFIGURAÇÃO GERAL E WEBSOCKET
+        // AJUSTE CRÍTICO: MUDANÇA DA PORTA DO WS PARA 8085 
+        // ===================================================
+        const WS_URL = 'ws://192.168.0.63:8085/ws'; 
+        const WS_STATUS = document.getElementById('status-conexao');
+        
+        // AJUSTE CRÍTICO DO CHART.JS PARA ESTABILIDADE (MANUTENÇÃO DO CÓDIGO DE TESTE) 
+        const BAR_HEIGHT_PX = 22; 
+        const CHART_PADDING_PX = 150; 
+        const CHART_MIN_HEIGHT = 250; 
+        const CHART_MAX_HEIGHT_PX = 2500; // Limite de altura para evitar loop infinito de renderização
+        
+        let websocket = null;
+        let metasAtuais = {};
+
+        // Variáveis globais de gráfico
+        let chartConsolidadoSep = null; 
+        let chartConsolidadoConf = null; 
+
+        // ===================================================
+        // FUNÇÕES DE UTILIDADE E CONTROLE
+        // ===================================================
+
+        function formatNumber(num, fixed = 0) {
+            if (isNaN(num) || num === null) return '0';
+            return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: fixed, maximumFractionDigits: fixed }).format(parseFloat(num));
+        }
+        
+        function updateMetasFromData(metasDoServidor) {
+            metasAtuais = metasDoServidor; 
+
+            document.getElementById('meta-pedidos-sep').value = metasDoServidor.sep_pedidos || 0;
+            document.getElementById('meta-volumes-sep').value = metasDoServidor.sep_volumes || 0;
+            document.getElementById('meta-sku-sep').value = metasDoServidor.sep_sku || 0;     
+            
+            document.getElementById('meta-pedidos-conf').value = metasDoServidor.conf_pedidos || 0;
+            document.getElementById('meta-volumes-conf').value = metasDoServidor.conf_volumes || 0;
+            document.getElementById('meta-sku-conf').value = metasDoServidor.conf_sku || 0;     
+            
+        }
+
+        // ===================================================
+        // FUNÇÕES DE WEBSOCKET E GRÁFICOS
+        // ===================================================
+        function connectWebSocket() {
+            if (websocket) { websocket.close(); }
+
+            websocket = new WebSocket(WS_URL);
+            WS_STATUS.textContent = 'CONECTANDO...';
+            WS_STATUS.style.color = 'yellow';
+
+            websocket.onopen = () => {
+                WS_STATUS.textContent = 'CONECTADO';
+                WS_STATUS.style.color = '#4CAF50'; 
+                
+                // Envia a requisição inicial com o filtro ATUAL na tela
+                const dataAtual = document.getElementById('data-selecionada').value;
+                const periodoAtual = document.getElementById('periodo-selecionado').value;
+                
+                requestDataForSelectedDate(dataAtual, periodoAtual); 
+            };
+
+            websocket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    updateDashboard(data);
+                } catch (e) {
+                    console.error('🚨 Erro ao parsear JSON do WebSocket:', e, 'Data recebida:', event.data);
+                }
+            };
+
+            websocket.onclose = () => {
+                WS_STATUS.textContent = 'DESCONECTADO';
+                WS_STATUS.style.color = 'red';
+                setTimeout(connectWebSocket, 5000); 
+            };
+
+            websocket.onerror = (error) => {
+                console.error('🚨 Erro no WebSocket:', error);
+                // Evita looping rápido de reconexão em caso de erro imediato
+                setTimeout(() => websocket.close(), 1000); 
+            };
+        }
+
+        /* FUNÇÃO CRÍTICA DE REDIMENSIONAMENTO (ESTABILIZADA) */
+        function resizeChartContainer(containerId, numItems) {
+            const container = document.getElementById(containerId);
+            const canvas = container.querySelector('canvas');
+            
+            const numBarGroups = numItems > 0 ? numItems : 1; 
+            // 3 datasets por funcionário
+            const totalRequiredHeight = (numBarGroups * BAR_HEIGHT_PX * 3) + CHART_PADDING_PX; 
+            
+            // AJUSTE CRÍTICO: Limita a altura calculada a um valor máximo 
+            const finalCanvasHeight = Math.min(Math.max(totalRequiredHeight, CHART_MIN_HEIGHT), CHART_MAX_HEIGHT_PX);
+            
+            canvas.style.height = `${finalCanvasHeight}px`; 
+            container.style.height = `${finalCanvasHeight}px`;
+
+            const scrollWrapper = container.closest('.chart-scroll-wrapper');
+            if (scrollWrapper) {
+                 // Define a altura máxima que a área de scroll deve ter (o espaço restante do painel).
+                 scrollWrapper.style.height = `calc(var(--chart-area-height) - 70px)`; 
+            }
+
+
+            setTimeout(() => {
+                const chartInstance = Chart.getChart(canvas);
+                if (chartInstance) chartInstance.resize(); 
+            }, 50); 
+        }
+
+
+        /* updateConsolidadoChart: FUNÇÃO ATIVA PARA OS GRÁFICOS PRINCIPAIS */
+        function updateConsolidadoChart(chartId, dataRanking, metas, titlePrefix) { 
+            
+            const canvas = document.getElementById(chartId); 
+            const currentChart = Chart.getChart(chartId); 
+
+            if (currentChart) {
+                 currentChart.destroy();
+            }
+            
+            // Se a lista estiver vazia, não desenha o chart, mas redimensiona
+            if (!dataRanking || dataRanking.length === 0) {
+                 resizeChartContainer(canvas.closest('.chart-container').id, 0); 
+                 return; 
+            }
+
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+
+            // --- Cores do Semáforo ---
+            const COR_META_BATIDA = '#009929';  //Verde
+            const COR_ALERTA = '#FFDE21'; //Amarelo
+            const COR_PENDENTE = '#FF0800'; //Vermelho
+
+            const COR_BASE_PEDIDOS = '#9370DB'; // Roxo
+            const COR_BASE_VOLUMES = '#00F0FF'; //Azul
+            const COR_BASE_SKUS = '#FFC0CB'; // Rosa
+            
+            // 1. Dados e Metas 
+            const labels = dataRanking.map(item => item.funcionario);
+
+            const pedidos = dataRanking.map(item => item.total_pedidos);
+            const volumes = dataRanking.map(item => item.total_volumes);
+            // Mapeando a chave correta retornada pelo Python
+            const itens = dataRanking.map(item => item.total_sku || 0);
+
+            const metaPedidos = metas[titlePrefix.toLowerCase() + '_pedidos'] || 1;
+            const metaVolumes = metas[titlePrefix.toLowerCase() + '_volumes'] || 1;
+            const metaItens = metas[titlePrefix.toLowerCase() + '_sku'] || 1; 
+
+            // Função para definir as cores dinâmicas
+            const getColors = (values, meta) => {
+                return values.map(value => {
+                    if (value === 0 || meta < 1) { 
+                        return COR_PENDENTE; 
+                    }
+                    const ratio = parseFloat(value) / parseFloat(meta);
+                    if (ratio >= 1) return COR_META_BATIDA;
+                    if (ratio >= 0.5) return COR_ALERTA;
+                    return COR_PENDENTE; 
+                }
+            );
+        };
+            
+            // 2. Criação dos Datasets
+            const datasets = [
+                {
+                    label: 'Ped',
+                    data: pedidos,
+                    backgroundColor: getColors(pedidos, metaPedidos), 
+                    borderColor: getColors(pedidos, metaPedidos),
+                    borderWidth: 1
+                },
+                {
+                    label: 'Vol',
+                    data: volumes,
+                    backgroundColor: getColors(volumes, metaVolumes), 
+                    borderColor: getColors(volumes, metaVolumes),
+                    borderWidth: 1
+                },
+                {
+                    label: 'SKUs',
+                    data: itens,
+                    backgroundColor: getColors(itens, metaItens), 
+                    borderColor: getColors(itens, metaItens),
+                    borderWidth: 1
+                }
+            ];
+
+            // 3. RECRIAR (Clusterizado)
+            const newChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: { 
+                    labels: labels, 
+                    datasets: datasets
+                },
+                options: {
+                    indexAxis: 'y', 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            display: true, 
+                            position: 'bottom', 
+                            labels: { color: 'white' }
+                        }, 
+                        title: { display: false }, 
+                        tooltip: { enabled: true }, 
+                        
+                        datalabels: { 
+                            backgroundColor: null, 
+                            anchor: 'end', 
+                            align: 'end', 
+                            offset: 8, 
+                            
+                            font: { 
+                                weight: 'bold', 
+                                size: 14 
+                            }, 
+                            
+                            color: (context) => {
+                                const label = context.dataset.label;
+                                if (label === 'Ped') return COR_BASE_PEDIDOS;
+                                if (label === 'Vol') return COR_BASE_VOLUMES;
+                                if (label === 'SKUs') return COR_BASE_SKUS;
+                                return '#FFFFFF';
+                            },
+                            
+                            formatter: (value, context) => {
+                                const label = context.dataset.label; 
+                                return `${label}: ${formatNumber(value)}`; 
+                            },
+                            clip: false 
+                        } 
+                    },
+                    scales: {
+                        x: { 
+                            beginAtZero: true, 
+                            grid: { color: '#3a3a5a' }, 
+                            ticks: { 
+                                color: '#c0c0c0', 
+                                font: { size: 10 }, 
+                                callback: (value) => Number.isInteger(value) ? formatNumber(value) : '' 
+                            }, 
+                            title: { display: true, text: 'QUANTIDADE', color: '#c0c0c0' }, 
+                            padding: { right: 50 } 
+                        },
+                        y: { 
+                            grid: { display: false }, 
+                            ticks: { 
+                                color: '#ffffff', 
+                                // AJUSTE CRÍTICO DA FONTE PARA ESCALA 
+                                font: { size: 14, weight: 'bold' }, 
+                                padding: 10, 
+                            },
+                            padding: { left: 10, right: 10 } 
+                        }
+                    }
+                }
+            });
+            
+            // 4. Redimensionar o container
+            // Passamos o número de itens na classificação
+            resizeChartContainer(canvas.closest('.chart-container').id, dataRanking.length); 
+            
+            return newChartInstance;
+        }
+
+
+        // NOVO FALLBACK PARA MANTER O FILTRO 
+        function requestDataForSelectedDate(dateString, periodo) { 
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                // Se a chamada veio vazia (tipo de um broadcast), usa o que está na tela
+                const dataAlvo = dateString || document.getElementById('data-selecionada').value || null;
+                const periodoAlvo = periodo || document.getElementById('periodo-selecionado').value || null;
+                
+                console.log(`📡 Solicitando dados para a data: ${dataAlvo || 'HOJE'} e turno: ${periodoAlvo || 'TODOS'}`);
+                
+                websocket.send(JSON.stringify({
+                    action: 'request_update',
+                    data_alvo: dataAlvo,
+                    periodo_alvo: periodoAlvo 
+                }));
+            } else {
+                console.error('🚨 WebSocket não está conectado ou pronto.');
+            }
+        }
+
+        /* updateDashboard: Persistência de Filtro Adicionada */
+        function updateDashboard(data) {
+            updateMetasFromData(data.metas || {}); 
+
+            // 1. Persistir filtros
+            const dataAlvo = data.data_selecionada; 
+            const periodoAlvo = data.periodo_selecionado; 
+
+            // Define os inputs com o valor que o servidor retornou (mantendo o filtro ativo)
+            document.getElementById('data-selecionada').value = dataAlvo || new Date().toISOString().split('T')[0];
+            document.getElementById('periodo-selecionado').value = periodoAlvo || ""; 
+
+            const dataExibida = dataAlvo 
+                ? new Date(dataAlvo + 'T00:00:00').toLocaleDateString('pt-BR') 
+                : new Date().toLocaleDateString('pt-BR'); 
+            
+            document.getElementById('data-atual').textContent = dataExibida;
+
+            const ativos = data.contagem_ativos || {};
+
+            // 2. Atualizar Rankings (Chart.js)
+            chartConsolidadoSep = updateConsolidadoChart(
+                'chartConsolidadoSep', 
+                data.ranking_separacao, 
+                metasAtuais, 
+                'sep' 
+            );
+            
+            chartConsolidadoConf = updateConsolidadoChart(
+                'chartConsolidadoConf', 
+                data.ranking_conferencia, 
+                metasAtuais, 
+                'conf' 
+            );
+            
+            // 3. Atualizar Totais (Rodapé - KPIs do Picking)
+            const totais = data.totais_resumo || {};
+            
+            document.getElementById('total-sep-pedidos').textContent = formatNumber(totais.total_pedidos_separados || 0);
+            document.getElementById('total-sep-sku').textContent = formatNumber(totais.total_sku_separado || 0);
+            document.getElementById('total-sep-volumes').textContent = formatNumber(totais.total_volumes_separado || 0);
+
+            document.getElementById('total-conf-pedidos').textContent = formatNumber(totais.total_pedidos_conferidos || 0);
+            document.getElementById('total-conf-sku').textContent = formatNumber(totais.total_sku_conferido || 0);
+            document.getElementById('total-conf-volumes').textContent = formatNumber(totais.total_volumes_conferido || 0);
+            
+            // 4. ATUALIZAR CONTADORES AO LADO DO TÍTULO
+            const sepAtivos = formatNumber(ativos.sep_ativos || 0);
+            const confAtivos = formatNumber(ativos.conf_ativos || 0);
+
+            document.getElementById('cont-sep-ativos').textContent = `(FUNCIONÁRIOS: ${sepAtivos})`;
+            document.getElementById('cont-conf-ativos').textContent = `(FUNCIONÁRIOS: ${confAtivos})`;
+
+            // 5. ATUALIZAR STATUS ERP
+            document.getElementById('erp-total-aberto').textContent = formatNumber(data.total_em_aberto_qtd || 0);
+            document.getElementById('erp-digitado').textContent = formatNumber(data.total_digitado_qtd || 0);
+            document.getElementById('erp-processado').textContent = formatNumber(data.total_processado_qtd || 0);
+            
+            // 🛑 AQUI ESTÁ A MUDANÇA NO JS: USANDO OS NOVOS CAMPOS SEGREGADOS 🛑
+            document.getElementById('erp-faturado-venda').textContent = formatNumber(data.total_faturado_venda_qtd || 0);
+            document.getElementById('erp-faturado-bonificacao').textContent = formatNumber(data.total_faturado_bonificacao_qtd || 0);
+
+
+            // 6. Atualizar Hora
+            document.getElementById('hora-atual').textContent = new Date().toLocaleTimeString('pt-BR');
+        }
+
+        // ===================================================
+        // INICIALIZAÇÃO
+        // ===================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            updateMetasFromData({});
+            document.getElementById('data-atual').textContent = new Date().toLocaleDateString('pt-BR');
+            
+            const today = new Date().toISOString().split('T')[0]; 
+            document.getElementById('data-selecionada').value = today; 
+            document.getElementById('periodo-selecionado').value = ""; 
+            
+            connectWebSocket();
+            window.addEventListener('resize', () => {
+                if (chartConsolidadoSep) chartConsolidadoSep.resize();
+                if (chartConsolidadoConf) chartConsolidadoConf.resize();
+            });
+        });
+
+    </script>
+</body>
+</html>
