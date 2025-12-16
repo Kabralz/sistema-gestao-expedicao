@@ -127,7 +127,6 @@ Benefícios para o Negócio
 ---
 
 ## 📸 Capturas de tela e explicações
-
 > As imagens a seguir ilustram as funcionalidades do sistema.
 
 ### 1. 🔐 Login (`login.php`)
@@ -174,11 +173,6 @@ O setor de Compras é responsável por encaminhar automaticamente o link de agen
 Sistema desenvolvido para uso interno da operação logística do Souza Atacado Distribuidor.  
 
 ---
-
-## 🤝 Colaboradores
-
-**Alexandre Rodrigues** – Contribuição na parte de User Interface (UI) e User Experience (UX)
-j
 
 ## 📄 Licença
 
