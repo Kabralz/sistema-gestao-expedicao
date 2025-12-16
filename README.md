@@ -65,6 +65,12 @@ Localizada em `/picking_realtime`, atua como o "motor" do sistema.
     <td><b>Painel para Gestão do Pedido Lançado</b><br><img src="prints/botao2-1.png" width="250"></td>
     <td><b>Pedidos Pendentes</b><br><img src="prints/botao3.png" width="250"></td>
     <td><b>Gerenciar Cadastro de Funcionários</b><br><img src="prints/botao4.png" width="250"></td>
+    <td><b>Trava de Digitação Errada</b><br><img src="prints/lancamento1.png" width="250"></td>
+  </tr>
+  <tr>
+    <td><b>Trava de Pedido Duplicado</b><br><img src="prints/lancamento2.png" width="250"></td>
+    <td><b>Pedido Correto e não Associado ainda</b><br><img src="prints/lancamento3.png" width="250"></td>
+    <td><b>Pedido ainda não encontrado pelo Robô</b><br><img src="prints/lancamento4.png" width="250"></td>
   </tr>
 </table>
 
