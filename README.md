@@ -57,13 +57,15 @@ Localizada em `/picking_realtime`, atua como o "motor" do sistema.
 <table align="center">
   <tr>
     <td><b>Login & Segurança</b><br><img src="prints/login.png" width="250"></td>
-    <td><b>Painel de Agendamentos</b><br><img src="prints/calendario.png" width="250"></td>
-    <td><b>Visão Operacional</b><br><img src="prints/agendamentos.png" width="250"></td>
+    <td><b>Painel de Agendamentos</b><br><img src="prints/painel.png" width="250"></td>
+    
   </tr>
   <tr>
-    <td><b>Controle de Cargas</b><br><img src="prints/recebimento.png" width="250"></td>
-    <td><b>Painel da Recepção</b><br><img src="prints/recepcao.png" width="250"></td>
-    <td><b>Módulo Público</b><br><img src="prints/publica.png" width="250"></td>
+    <td><b>Visão Operacional</b><br><img src="prints/botao1.png" width="250"></td>
+    <td><b>Controle de Cargas</b><br><img src="prints/botao2.png" width="250"></td>
+    <td><b>Painel da Recepção</b><br><img src="prints/botao2-1.png" width="250"></td>
+    <td><b>Módulo Público</b><br><img src="prints/botao3.png" width="250"></td>
+    <td><b>Módulo Público</b><br><img src="prints/botao4.png" width="250"></td>
   </tr>
 </table>
 
