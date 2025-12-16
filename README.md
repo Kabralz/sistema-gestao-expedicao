@@ -72,7 +72,6 @@ Localizada em `/picking_realtime`, atua como o "motor" do sistema.
 ## 👨‍💻 Equipe
 
 * **Matheus Cabral** - *Desenvolvedor Principal* (Arquitetura, Python, PHP & DB)
-* **Alexandre Rodrigues** - *UX/UI Design*
 
 ---
 
