@@ -58,11 +58,10 @@ Localizada em `/picking_realtime`, atua como o "motor" do sistema.
   <tr>
     <td><b>Login & Segurança</b><br><img src="prints/login.png" width="250"></td>
     <td><b>Painel de Lançamentos</b><br><img src="prints/painel.png" width="250"></td>
-    
+    <td><b>Cadastro de Funcionário</b><br><img src="prints/botao1.png" width="250"></td>
+    <td><b>Consulta de Pedidos</b><br><img src="prints/botao2.png" width="250"></td>    
   </tr>
   <tr>
-    <td><b>Cadastro de Funcionário</b><br><img src="prints/botao1.png" width="250"></td>
-    <td><b>Consulta de Pedidos</b><br><img src="prints/botao2.png" width="250"></td>
     <td><b>Painel para Gestão do Pedido Lançado</b><br><img src="prints/botao2-1.png" width="250"></td>
     <td><b>Pedidos Pendentes</b><br><img src="prints/botao3.png" width="250"></td>
     <td><b>Gerenciar Cadastro de Funcionários</b><br><img src="prints/botao4.png" width="250"></td>
